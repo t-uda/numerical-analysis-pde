@@ -58,11 +58,8 @@ int main(int argc, char * argv[]) {
 
 	// ヤコビ法による反復計算で方程式 Ah * uh = Fh を解く
 	// 反復の初期値は D^{-1} * Fh で与える
-	for (int i = 1; i < N; ++i) {
-		for (int j = 1; j < N; ++j) {
-			int m = get_index(i, j);
-			uh[m] = Fh[m] / (4 * N * N);
-		}
+	for (int m = 0; m < n; ++m) {
+		uh[m] = Fh[m] / (4 * N * N);
 	}
 	for (int k = 0; k < MAXITER; ++k) {
 		// 疎行列 H = -D^{-1} * R は非零要素 1/4 を非対角に高々 4 つもつ
@@ -86,17 +83,17 @@ int main(int argc, char * argv[]) {
 		}
 
 		// 未知ベクトルを更新する
-		double xnorm = 0.0;
+		double uh_norm = 0.0;
 		double res = 0.0;
 		for (int i = 1; i < N; ++i) {
 			for (int j = 1; j < N; ++j) {
 				int m = get_index(i, j);
 				res += (uh[m] - uh_new[m]) * (uh[m] - uh_new[m]);
-				xnorm += uh[m] * uh[m];
+				uh_norm += uh[m] * uh[m];
 				uh[m] = uh_new[m];
 			}
 		}
-		res /= xnorm;
+		res /= uh_norm;
 		// 更新分の二乗和を見て反復計算を続けるか判断する
 		if (res < TOLERANCE || k == MAXITER - 1) {
 			// 標準エラー出力にログを書き出す．

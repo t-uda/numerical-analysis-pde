@@ -157,13 +157,8 @@ int main(int argc, char * argv[]) {
 
 	// ヤコビ法による反復計算で方程式 Ah * uh = Fh を解く
 	// 反復の初期値は D^{-1} * Fh に近いものでよい
-	for (int i = 0; i <= N; ++i) {
-		for (int j = 0; j <= N; ++j) {
-			if (is_internal(i, j)) {
-				int m = indices[i][j];
-				uh[m] = Fh[m] * h * h / 4.0;
-			}
-		}
+	for (int m = 0; m < n; ++m) {
+		uh[m] = Fh[m] * h * h / 4.0;
 	}
 
 	for (int k = 0; k < MAXITER; ++k) {
@@ -178,16 +173,16 @@ int main(int argc, char * argv[]) {
 					double L_E = 1.0 / lambda_E(i, j);
 					double a_ii = L_B + L_C + L_D + L_E;
 					uh_new[m] = Fh[m] * h * h / a_ii; // D^{-1} * Fh
-					if (indices[i + 1][j] >= 0) { // 右側
+					if (is_internal(i + 1, j)) { // 右側
 						uh_new[m] += uh[indices[i + 1][j]] * L_B / a_ii;
 					}
-					if (indices[i - 1][j] >= 0) { // 左側
+					if (is_internal(i - 1, j)) { // 左側
 						uh_new[m] += uh[indices[i - 1][j]] * L_C / a_ii;
 					}
-					if (indices[i][j + 1] >= 0) { // 上側
+					if (is_internal(i, j + 1)) { // 上側
 						uh_new[m] += uh[indices[i][j + 1]] * L_D / a_ii;
 					}
-					if (indices[i][j - 1] >= 0) { // 下側
+					if (is_internal(i, j - 1)) { // 下側
 						uh_new[m] += uh[indices[i][j - 1]] * L_E / a_ii;
 					}
 				}
