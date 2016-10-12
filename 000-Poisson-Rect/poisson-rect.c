@@ -1,5 +1,17 @@
-// 例1.1 正方形領域におけるポアソン方程式の差分解法
-// ここではディリクレ境界0としている．
+// 例1.1 正方形領域におけるポアソン方程式の差分解法．
+// ここではディリクレ境界 0 で，厳密解が
+//
+//     u = \sin(\pi x) \sin(\pi y).
+//
+// となるポアソン方程式を解いている．
+// プログラムは make を使うか，gcc を使ってコンパイルせよ．
+// このプログラムは標準出力に計算結果を出力する．
+// 可視化するためには，一度ファイルに出力するなどして，
+// 例えば gnuplot で splot 'output.dat' を試せ．
+//
+//     $ make
+//     $ ./poisson-rect.out > output.dat
+//     $ gnuplot -e "splot 'output.dat'"
 
 #include <stdio.h>
 #include <math.h>
@@ -22,7 +34,7 @@ double uh[n];
 double uh_new[n];
 double Fh[n];
 
-// 節点 (ih, jh) (0 < i, j < N) に対して 0 <= m < n を返す
+// 内部節点 (ih, jh) (0 < i, j < N) に対して 0 <= m < n を返す
 int get_index(int i, int j) {
 	return (N - 1) * (i - 1) + (j - 1);
 }
@@ -36,6 +48,9 @@ int main(int argc, char * argv[]) {
 	// 右辺ベクトルの初期化
 	for (int i = 1; i < N; ++i) {
 		for (int j = 1; j < N; ++j) {
+			// ディリクレ zero の場合の右辺ベクトルは単に f である．
+			// 講義でも述べられていたように，ディリクレ nonzero の場合は
+			// 境界条件に由来する項を右辺ベクトルに足し上げよ．
 			int m = get_index(i, j);
 			Fh[m] = f(i * h, j * h);
 		}
@@ -84,6 +99,9 @@ int main(int argc, char * argv[]) {
 		res /= xnorm;
 		// 更新分の二乗和を見て反復計算を続けるか判断する
 		if (res < TOLERANCE || k == MAXITER - 1) {
+			// 標準エラー出力にログを書き出す．
+			// このようにデバッグ用のログは標準エラー出力に出しておけば，
+			// 標準出力にでた数値結果の方を汚さずにファイルに保存できる．
 			fprintf(stderr, "[%d] res = %e\n", k, res);
 			break;
 		}
