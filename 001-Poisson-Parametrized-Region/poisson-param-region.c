@@ -189,14 +189,14 @@ int main(int argc, char * argv[]) {
 		}
 
 		// 未知ベクトルを更新する
-		double xnorm = 0.0;
+		double uh_norm = 0.0;
 		double res = 0.0;
 		for (int m = 0; m < n; ++m) {
 			res += (uh[m] - uh_new[m]) * (uh[m] - uh_new[m]);
-			xnorm += uh[m] * uh[m];
+			uh_norm += uh[m] * uh[m];
 			uh[m] = uh_new[m];
 		}
-		res /= xnorm;
+		res /= uh_norm;
 		// 更新分の二乗和を見て反復計算を続けるか判断する
 		if (res < TOLERANCE || k == MAXITER - 1) {
 			// 標準エラー出力にログを書き出す．
