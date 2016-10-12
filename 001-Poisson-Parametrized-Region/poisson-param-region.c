@@ -34,12 +34,12 @@ int indices[N + 1][N + 1];
 
 // ポアソン方程式の右辺
 double f(double x, double y) {
-	return 4.0;
+	return 0.0;
 }
 
 // 境界条件
 double Dirichlet_data(double x, double y) {
-	return 0.0;
+	return x * x - y * y;
 }
 
 // 境界のパラメータ表示
@@ -131,7 +131,7 @@ int main(int argc, char * argv[]) {
 				// 正則な節点の場合，C = 1 となることに注意
 				double C = (lambda_B(i, j) + lambda_C(i, j)) * (lambda_D(i, j) + lambda_E(i, j)) / 4.0;
 				Fh[m] = C * f(x, y);
-				// TODO: 境界条件から既知の数を右辺ベクトルに足し上げる．
+				// 境界条件から既知の数を右辺ベクトルに足し上げる．
 				if (!is_internal(i + 1, j)) { // 右側
 					double y = Y0 + j * h;
 					Fh[m] += Dirichlet_data(x_right(y), y) / (lambda_B(i, j) * h * h);
