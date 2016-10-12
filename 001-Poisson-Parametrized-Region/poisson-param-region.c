@@ -69,16 +69,6 @@ bool is_internal(int i, int j) {
 	return true;
 }
 
-// 正則な節点かどうか判定する．
-bool is_regular(int i, int j) {
-	if (!is_internal(i, j)) return false;
-	if (!is_internal(i - 1, j)) return false;
-	if (!is_internal(i + 1, j)) return false;
-	if (!is_internal(i, j - 1)) return false;
-	if (!is_internal(i, j + 1)) return false;
-	return true;
-}
-
 // 内部節点 P_ij における lambda_X (X=B,C,D,E) の値を返す．
 // 凸領域で上下左右の媒介変数表示が与えられているため以下のように
 // 簡単に求まるが，一般にこの方法で求められるとは限らない．
@@ -121,7 +111,7 @@ int main(int argc, char * argv[]) {
 
 	// // // // // // // // // * キ ケ ン * // // // // // // // // // //
 	// // // // // malloc 関数の使用には十分注意すること！ // // // // //
-	// 事前に未知数の数 n が分からないため，メモリ確保命令 malloc を使う
+	// 事前に未知数の数 n が分からないため，メモリ確保命令 malloc を使い
 	// 浮動小数点数型の配列を動的確保する．
 	double * uh = malloc(n * sizeof(double));
 	double * uh_new = malloc(n * sizeof(double));
@@ -134,17 +124,30 @@ int main(int argc, char * argv[]) {
 	// 右辺ベクトルを初期化する
 	for (int i = 0; i <= N; ++i) {
 		for (int j = 0; j <= N; ++j) {
-			int m = indices[i][j];
-			if (m >= 0) {
-				// 正則な節点の場合，C = 1 となることに注意
+			if (is_internal(i, j)) {
+				int m = indices[i][j];
 				double x = X0 + i * h;
 				double y = Y0 + j * h;
+				// 正則な節点の場合，C = 1 となることに注意
 				double C = (lambda_B(i, j) + lambda_C(i, j)) * (lambda_D(i, j) + lambda_E(i, j)) / 4.0;
 				Fh[m] = C * f(x, y);
-				//// TODO: 境界条件から既知の数を右辺ベクトルに足し上げる．
-				//// ここではディリクレ zero なので何もしなくても問題ない．
-				//if (!is_regular(i, j)) {
-				//}
+				// TODO: 境界条件から既知の数を右辺ベクトルに足し上げる．
+				if (!is_internal(i + 1, j)) { // 右側
+					double y = Y0 + j * h;
+					Fh[m] += Dirichlet_data(x_right(y), y) / (lambda_B(i, j) * h * h);
+				}
+				if (!is_internal(i - 1, j)) { // 左側
+					double y = Y0 + j * h;
+					Fh[m] += Dirichlet_data(x_left(y), y) / (lambda_C(i, j) * h * h);
+				}
+				if (!is_internal(i, j + 1)) { // 上側
+					double x = X0 + i * h;
+					Fh[m] += Dirichlet_data(x, y_top(x)) / (lambda_D(i, j) * h * h);
+				}
+				if (!is_internal(i, j - 1)) { // 下j側
+					double x = X0 + i * h;
+					Fh[m] += Dirichlet_data(x, y_bottom(x)) / (lambda_E(i, j) * h * h);
+				}
 			}
 		}
 	}
@@ -153,8 +156,8 @@ int main(int argc, char * argv[]) {
 	// 反復の初期値は D^{-1} * Fh に近いものでよい
 	for (int i = 0; i <= N; ++i) {
 		for (int j = 0; j <= N; ++j) {
-			int m = indices[i][j];
-			if (m >= 0) {
+			if (is_internal(i, j)) {
+				int m = indices[i][j];
 				uh[m] = Fh[m] * h * h / 4.0;
 			}
 		}
@@ -164,8 +167,8 @@ int main(int argc, char * argv[]) {
 		// 疎行列 H = -D^{-1} * R は非零要素を非対角に高々 4 つもつ
 		for (int i = 0; i <= N; ++i) {
 			for (int j = 0; j <= N; ++j) {
-				int m = indices[i][j];
-				if (m >= 0) {
+				if (is_internal(i, j)) {
+					int m = indices[i][j];
 					double L_B = 1.0 / lambda_B(i, j);
 					double L_C = 1.0 / lambda_C(i, j);
 					double L_D = 1.0 / lambda_D(i, j);
@@ -210,8 +213,8 @@ int main(int argc, char * argv[]) {
 	// 出力する
 	for (int i = 0; i <= N; i += CULL) {
 		for (int j = 0; j <= N; j += CULL) {
-			int m = indices[i][j];
-			if (m >= 0) {
+			if (is_internal(i, j)) {
+				int m = indices[i][j];
 				printf("%f %f %f\n", X0 + i * h, Y0 + j * h, uh[m]);
 				// debug
 				if (fabs(X0 + i * h) < h / 8 && fabs(Y0 + j * h) < h / 8) {
