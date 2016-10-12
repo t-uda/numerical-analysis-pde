@@ -11,5 +11,5 @@ all: poisson-rect.out
 	$(CC) -Wall -O3 -c -o $@ $<
 
 clean:
-	git clean -fX .
+	$(RM) *.o *.out
 
