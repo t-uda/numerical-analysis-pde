@@ -109,6 +109,9 @@ double lambda_E(int i, int j) {
 	return (Y0 + j * h) - y_bottom(X0 + i * h);
 }
 
+// この関数は下で定義する．
+double * allocate_real_vector(size_t);
+
 int main(int argc, char * argv[]) {
 	// 内部節点の数 n を数える（未知数の数）
 	int n = 0;
@@ -125,19 +128,11 @@ int main(int argc, char * argv[]) {
 	}
 
 	// // // // // // // // // * キ ケ ン * // // // // // // // // // //
-	// // // // // malloc 関数の使用には十分注意すること！ // // // // //
-	// 事前に未知数の数 n が分からないため，メモリ確保命令 malloc を使い
-	// 浮動小数点数型の配列を動的確保する．
-	double * uh = malloc(n * sizeof(double));
-	double * uh_new = malloc(n * sizeof(double));
-	double * Fh = malloc(n * sizeof(double));
-	if (uh == NULL || uh_new == NULL || Fh == NULL) {
-		fprintf(stderr, "Failed to allocate vectors. ABORT.\n");
-		free(uh);
-		free(uh_new);
-		free(Fh);
-		exit(EXIT_FAILURE);
-	}
+	// 事前に未知数の数 n が分からないので配列は動的確保する．
+	// 動的確保した配列は free() を使って解放するのを忘れないこと．
+	double * uh = allocate_real_vector(n);
+	double * uh_new = allocate_real_vector(n);
+	double * Fh = allocate_real_vector(n);
 
 	// 右辺ベクトルを初期化する
 	for (int i = 0; i <= N; ++i) {
@@ -243,5 +238,19 @@ int main(int argc, char * argv[]) {
 	free(uh_new);
 	free(Fh);
 	return 0;
+}
+
+// // // // // // // // // * キ ケ ン * // // // // // // // // // //
+// // // // // malloc 関数の使用には十分注意すること！ // // // // //
+// 事前に配列サイズが分からないときは，メモリ確保命令 malloc を使い
+// 浮動小数点数型の配列を動的確保する．
+// 使い終わったら必ず free() すること．
+double * allocate_real_vector(size_t n) {
+	double * vector = malloc(n * sizeof(double));
+	if (vector == NULL) {
+		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
+		exit(EXIT_FAILURE);
+	}
+	return vector;
 }
 
