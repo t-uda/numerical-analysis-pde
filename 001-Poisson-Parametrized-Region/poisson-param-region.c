@@ -118,6 +118,9 @@ int main(int argc, char * argv[]) {
 	double * Fh = malloc(n * sizeof(double));
 	if (uh == NULL || uh_new == NULL || Fh == NULL) {
 		fprintf(stderr, "Failed to allocate vectors. ABORT.\n");
+		free(uh);
+		free(uh_new);
+		free(Fh);
 		exit(EXIT_FAILURE);
 	}
 
