@@ -146,19 +146,15 @@ int main(int argc, char * argv[]) {
 				Fh[m] = C * f(x, y);
 				// 境界条件から既知の数を右辺ベクトルに足し上げる．
 				if (!is_internal(i + 1, j)) { // 右側
-					double y = Y0 + j * h;
 					Fh[m] += Dirichlet_data(x_right(y), y) / (lambda_B(i, j) * h * h);
 				}
 				if (!is_internal(i - 1, j)) { // 左側
-					double y = Y0 + j * h;
 					Fh[m] += Dirichlet_data(x_left(y), y) / (lambda_C(i, j) * h * h);
 				}
 				if (!is_internal(i, j + 1)) { // 上側
-					double x = X0 + i * h;
 					Fh[m] += Dirichlet_data(x, y_top(x)) / (lambda_D(i, j) * h * h);
 				}
 				if (!is_internal(i, j - 1)) { // 下j側
-					double x = X0 + i * h;
 					Fh[m] += Dirichlet_data(x, y_bottom(x)) / (lambda_E(i, j) * h * h);
 				}
 			}
