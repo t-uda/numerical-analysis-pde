@@ -91,9 +91,6 @@ bool is_internal(int i, int j) {
 }
 
 // 内部節点 P_ij における lambda_X (X=B,C,D,E) の値を返す．
-// 凸領域で上下左右の媒介変数表示が与えられているため以下のように
-// 簡単に求まるが，一般にこの方法で求められるとは限らない．
-// （つまり，より丁寧な場合分けが必要である．）
 // 右側
 double lambda_B(int i, int j) {
 	if (is_internal(i + 1, j)) return 1.0;
@@ -115,7 +112,7 @@ double lambda_E(int i, int j) {
 	return (Y0 + j * h) - compute_boundary_y(X0 + i * h, Y0 + j * h);
 }
 
-// この関数は下で定義する．
+// 浮動小数点数型の配列を動的確保する関数．後で定義する．
 double * allocate_real_vector(size_t);
 
 int main(int argc, char * argv[]) {
@@ -160,7 +157,7 @@ int main(int argc, char * argv[]) {
 				if (!is_internal(i, j + 1)) { // 上側
 					Fh[m] += Dirichlet_data(x, compute_boundary_y(x, y)) / (lambda_D(i, j) * h * h);
 				}
-				if (!is_internal(i, j - 1)) { // 下j側
+				if (!is_internal(i, j - 1)) { // 下側
 					Fh[m] += Dirichlet_data(x, compute_boundary_y(x, y)) / (lambda_E(i, j) * h * h);
 				}
 			}
