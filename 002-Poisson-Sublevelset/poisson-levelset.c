@@ -223,10 +223,6 @@ int main(int argc, char * argv[]) {
 			if (is_internal(i, j)) {
 				int m = indices[i][j];
 				printf("%f %f %f\n", X0 + i * h, Y0 + j * h, uh[m]);
-				// debug
-				if (fabs(X0 + i * h) < h / 8 && fabs(Y0 + j * h) < h / 8) {
-					fprintf(stderr, "u(0, 0) = %e\n", uh[m]);
-				}
 			}
 		}
 	}
