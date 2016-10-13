@@ -26,16 +26,16 @@
 // 格子の縦および横の長さ
 #define L (3.0)
 // L あたりの分割数
-#define N (512)
+#define N (256)
 // 分割幅
 #define h (L / N)
 
 // ヤコビ法の反復終了の閾値
-#define TOLERANCE (1.0e-13)
+#define TOLERANCE (1.0e-12)
 // ヤコビ法の最大反復回数
-#define MAXITER (20000)
+#define MAXITER (10000)
 // 出力時に間引くデータ間隔
-#define CULL (4)
+#define CULL (2)
 
 // 内部節点に連番をふるための配列
 int indices[N + 1][N + 1];
