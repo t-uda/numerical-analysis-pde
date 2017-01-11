@@ -1,3 +1,7 @@
+NbVertices	4
+NbEdges	5
+NbTriangles	2
+
 Vertex	0	0	0
 Vertex	1	1	0
 Vertex	2	0	1
