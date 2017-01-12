@@ -7,9 +7,18 @@
 #include <stdbool.h>
 #include <math.h>
 
-typedef struct vertex {
+typedef struct vector2d Vector2D;
+typedef struct vertex Vertex;
+typedef struct edge Edge;
+typedef struct triangle Triangle;
+
+typedef struct vector2d {
 	double x;
 	double y;
+} Vector2D;
+
+typedef struct vertex {
+	Vector2D pos;
 } Vertex;
 
 typedef struct edge {
@@ -21,6 +30,19 @@ typedef struct triangle {
 	Edge * edges[3];
 	Vertex * vertices[3];
 } Triangle;
+
+Vector2D vec_sub(Vector2D a, Vector2D b) {
+	Vector2D c = {a.x - b.x, a.y - b.y};
+	return c;
+}
+
+double vec_prod(Vector2D a, Vector2D b) {
+	return a.x * b.x + a.y * b.y;
+}
+
+double length(Vector2D v) {
+	return hypot(v.x, v.y);
+}
 
 // // // // // // // // // * キ ケ ン * // // // // // // // // // //
 // // // // // malloc 関数の使用には十分注意すること！ // // // // //
@@ -61,14 +83,38 @@ Triangle * allocate_triangle_vector(size_t n) {
 }
 // // // // // // // // // * キ ケ ン * // // // // // // // // // //
 
-double length(Edge e) {
-	Vertex p = *e.p, q = *e.q;
-	return hypot(p.x - q.x, p.y - q.y);
+// 行列式 |q-p, r-p|
+double determinant(Vector2D p, Vector2D q, Vector2D r) {
+	double a = q.x - p.x, b = r.x - p.x, c = q.y - p.y, d = r.y - p.y;
+	return a * d - b * c;
 }
-double area(Triangle tau) {
-	double a = length(*tau.edges[0]), b = length(*tau.edges[1]), c = length(*tau.edges[2]);
-	double s = (a + b + c) / 2.0;
-	return sqrt(s * (s - a) * (s - b) * (s - c));
+
+double area_parallelogram(Triangle tau) {
+	return fabs(determinant(tau.vertices[0]->pos, tau.vertices[1]->pos, tau.vertices[2]->pos));
+}
+
+// 三角形要素 tau 上での基底関数同士の L2 内積を返す
+double prod_L2_tau(Triangle tau, size_t i, size_t j) {
+	double d = area_parallelogram(tau);
+	return (i == j) ? (d / 12.0) : (d / 24.0);
+}
+
+// i 番目の頂点の対辺の内向き法線を返す
+Vector2D inward_normal_vector(Triangle tau, size_t i) {
+	Vector2D p = tau.vertices[i%3]->pos, q = tau.vertices[(i+1)%3]->pos, r = tau.vertices[(i+2)%3]->pos;
+	double d = determinant(p, q, r);
+	Vector2D qr = vec_sub(q, r);
+	Vector2D n = {-qr.y, qr.x};
+	if (d < 0.0) { n.x = -n.x; n.y = -n.y; }
+	return n;
+}
+
+// 三角形要素 tau 上での H1 セミ内積（grad をかけた L2 内積）を返す
+double semi_prod_H1_tau(Triangle tau, size_t i, size_t j) {
+	double area = area_parallelogram(tau);
+	Vector2D grad_i = inward_normal_vector(tau, i); // area で割ると i 番目の基底関数の勾配
+	Vector2D grad_j = inward_normal_vector(tau, j); // j についても同様
+	return 0.5 * vec_prod(grad_i, grad_j) / area; // 掛けて面積分 i.e. L2 内積
 }
 
 int main(int argc, char * argv[]) {
@@ -103,8 +149,8 @@ int main(int argc, char * argv[]) {
 			size_t p, q; // Edge (p, q)
 			size_t e0, e1, e2; // Triangle (e1, e2, e3)
 			if (sscanf(buffer, "Vertex %zu %lf %lf", &id, &x, &y) == 3) {
-				vertices[id].x = x;
-				vertices[id].y = y;
+				vertices[id].pos.x = x;
+				vertices[id].pos.y = y;
 			//	printf("Vertex#%zu (%f, %f)\n", id, x, y);
 			} else if (sscanf(buffer, "Edge %zu %zu %zu", &id, &p, &q) == 3) {
 				edges[id].p = &vertices[p];
@@ -120,7 +166,6 @@ int main(int argc, char * argv[]) {
 				tau->vertices[1] = q = edges[e0].q;
 				tau->vertices[2] = (edges[e1].p == p || edges[e1].p == q) ? edges[e1].q : edges[e1].p;
 			//	printf("Triangle#%zu (%zu, %zu, %zu)\n", id, e0, e1, e2);
-			//	printf("|T#%zu| = %lf\n", id, area(*tau));
 			}
 		}
 	}
