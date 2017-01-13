@@ -1,14 +1,17 @@
 
+CFLAGS=-Wall -O3
+LDFLAGS=-lm
+
 .PHONY: all clean
 .PRECIOUS: %.c %.o
 
-all: fem.out
-
-%.out: %.o
-	$(CC) -Wall -O3 -lm -o $@ $<
+all: fem.out genmesh.out
 
 %.o: %.c
-	$(CC) -Wall -O3 -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+%.out: %.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
 clean:
 	$(RM) *.o *.out
