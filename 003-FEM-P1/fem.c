@@ -19,6 +19,7 @@ typedef struct vector2d {
 
 typedef struct vertex {
 	Vector2D pos;
+	bool is_internal;
 } Vertex;
 
 typedef struct edge {
@@ -49,6 +50,14 @@ double length(Vector2D v) {
 // 事前に配列サイズが分からないときは，メモリ確保命令 malloc を使い
 // 浮動小数点数型の配列を動的確保する．
 // 使い終わったら必ず free() すること．
+double ** allocate_double_ptr_vector(size_t n) {
+	double ** vector = malloc(n * sizeof(double *));
+	if (vector == NULL) {
+		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
+		exit(EXIT_FAILURE);
+	}
+	return vector;
+}
 double * allocate_real_vector(size_t n) {
 	double * vector = malloc(n * sizeof(double));
 	if (vector == NULL) {
@@ -59,6 +68,14 @@ double * allocate_real_vector(size_t n) {
 }
 Vertex * allocate_vertex_vector(size_t n) {
 	Vertex * vector = malloc(n * sizeof(Vertex));
+	if (vector == NULL) {
+		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
+		exit(EXIT_FAILURE);
+	}
+	return vector;
+}
+Vertex ** allocate_vertex_ptr_vector(size_t n) {
+	Vertex ** vector = malloc(n * sizeof(Vertex *));
 	if (vector == NULL) {
 		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
 		exit(EXIT_FAILURE);
@@ -100,8 +117,19 @@ double prod_L2_tau(Triangle tau, size_t i, size_t j) {
 }
 
 // i 番目の頂点の対辺の内向き法線を返す
-Vector2D inward_normal_vector(Triangle tau, size_t i) {
-	Vector2D p = tau.vertices[i%3]->pos, q = tau.vertices[(i+1)%3]->pos, r = tau.vertices[(i+2)%3]->pos;
+Vector2D inward_normal_vector(Triangle tau, Vertex * pi_ptr) {
+	Vector2D p, q, r;
+	p = pi_ptr->pos;
+	if (tau.vertices[0] == pi_ptr) {
+		q = tau.vertices[1]->pos;
+		r = tau.vertices[2]->pos;
+	} else if (tau.vertices[1] == pi_ptr) {
+		q = tau.vertices[2]->pos;
+		r = tau.vertices[0]->pos;
+	} else if (tau.vertices[2] == pi_ptr) {
+		q = tau.vertices[0]->pos;
+		r = tau.vertices[1]->pos;
+	}
 	double d = determinant(p, q, r);
 	Vector2D qr = vec_sub(q, r);
 	Vector2D n = {-qr.y, qr.x};
@@ -110,10 +138,10 @@ Vector2D inward_normal_vector(Triangle tau, size_t i) {
 }
 
 // 三角形要素 tau 上での H1 セミ内積（grad をかけた L2 内積）を返す
-double semi_prod_H1_tau(Triangle tau, size_t i, size_t j) {
+double semi_prod_H1_tau(Triangle tau, Vertex * pi_ptr, Vertex * pj_ptr) {
 	double area = area_parallelogram(tau);
-	Vector2D grad_i = inward_normal_vector(tau, i); // area で割ると i 番目の基底関数の勾配
-	Vector2D grad_j = inward_normal_vector(tau, j); // j についても同様
+	Vector2D grad_i = inward_normal_vector(tau, pi_ptr); // area で割ると i 番目の基底関数の勾配
+	Vector2D grad_j = inward_normal_vector(tau, pj_ptr); // j についても同様
 	return 0.5 * vec_prod(grad_i, grad_j) / area; // 掛けて面積分 i.e. L2 内積
 }
 
@@ -148,9 +176,11 @@ int main(int argc, char * argv[]) {
 			double x, y; // Vertex (x, y)
 			size_t p, q; // Edge (p, q)
 			size_t e0, e1, e2; // Triangle (e1, e2, e3)
-			if (sscanf(buffer, "Vertex %zu %lf %lf", &id, &x, &y) == 3) {
+			int is_internal;
+			if (sscanf(buffer, "Vertex %zu %lf %lf %d", &id, &x, &y, &is_internal) == 4) {
 				vertices[id].pos.x = x;
 				vertices[id].pos.y = y;
+				vertices[id].is_internal = is_internal;
 			//	printf("Vertex#%zu (%f, %f)\n", id, x, y);
 			} else if (sscanf(buffer, "Edge %zu %zu %zu", &id, &p, &q) == 3) {
 				edges[id].p = &vertices[p];
@@ -169,10 +199,54 @@ int main(int argc, char * argv[]) {
 			}
 		}
 	}
-	free(vertices);
-	free(edges);
-	free(triangles);
 	fclose(mesh_file);
+
+	size_t n = 0;
+	Vertex ** internal_vertices = allocate_vertex_ptr_vector(nbv);
+	for (size_t m = 0; m < nbv; m++) {
+		if (vertices[m].is_internal) {
+			internal_vertices[n] = &vertices[m];
+			n++;
+		}
+	}
+	double * a_data = allocate_real_vector(n * n);
+	double ** a = allocate_double_ptr_vector(n);
+	for (size_t i = 0; i < n; i++) {
+		a[i] = &a_data[i * n];
+	}
+	for (size_t i = 0; i < n; i++) {
+		Vertex * pi_ptr = internal_vertices[i];
+		for (size_t j = i; j < n; j++) {
+			Vertex * pj_ptr = internal_vertices[j];
+			a[i][j] = a[j][i] = 0.0;
+			if (i != j) {
+				bool is_adjascent = false;
+				for (size_t e_id = 0; e_id < nbe; ++e_id) {
+					Edge e = edges[e_id];
+					if ((e.p == pi_ptr && e.q == pj_ptr) || (e.p == pj_ptr && e.q == pi_ptr)) {
+						is_adjascent = true;
+						break;
+					}
+				}
+				if (!is_adjascent) continue;
+			}
+			for (size_t k = 0; k < nbt; k++) {
+				Triangle tau = triangles[k];
+				Vertex * p = tau.vertices[0], * q = tau.vertices[1], * r = tau.vertices[2];
+				if (pi_ptr == p || pi_ptr == q || pi_ptr == r)
+				if (pj_ptr == p || pj_ptr == q || pj_ptr == r)
+					a[i][j] += semi_prod_H1_tau(tau, pi_ptr, pj_ptr);
+			}
+			a[j][i] = a[i][j];
+			fprintf(stderr, "a[%zu][%zu] = %le\n", i, j, a[i][j]);
+		}
+	}
+	free(a);
+	free(a_data);
+	free(internal_vertices);
+	free(triangles);
+	free(edges);
+	free(vertices);
 	return 0;
 }
 
