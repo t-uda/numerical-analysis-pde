@@ -5,13 +5,17 @@ LDFLAGS=-lm
 .PHONY: all clean
 .PRECIOUS: %.c %.o
 
-all: fem.out genmesh.out
+all: fem.out rectmesh.out genmesh.out
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 %.out: %.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+
+fem.out: fem.o mesh.o vector.o
+
+genmesh.out: genmesh.o mesh.o vector.o
 
 clean:
 	$(RM) *.o *.out
