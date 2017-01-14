@@ -3,7 +3,7 @@
 // プログラム作成者：宇田 智紀
 //
 // n×m の単純な三角形メッシュを生成する
-//     ./genmesh n m > mesh.dat
+//     ./rectmesh.out n m > mesh.dat
 //
 
 #include <stdio.h>

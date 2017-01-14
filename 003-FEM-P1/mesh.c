@@ -51,6 +51,16 @@ double semi_prod_H1_tau(Triangle tau, Vertex * pi_ptr, Vertex * pj_ptr) {
 	return 0.5 * vec2D_prod(grad_i, grad_j) / area; // 掛けて面積分 i.e. L2 内積
 }
 
+Edge * find_edge(size_t nbe, Edge * edges, Vertex * p, Vertex * q) {
+	for (size_t id = 0; id < nbe; id++) {
+		Edge * e = &edges[id];
+		if (e->p == p && e->q == q) return e;
+		if (e->p == q && e->q == p) return e;
+	}
+	fprintf(stderr, "[WARNING] NULL returned in find_edge().\n");
+	return NULL;
+}
+
 Mesh read_mesh(char mesh_file_name[]) {
 	FILE * mesh_file = fopen(mesh_file_name, "r");
 	if (mesh_file == NULL) {
@@ -110,6 +120,31 @@ Mesh read_mesh(char mesh_file_name[]) {
 	fclose(mesh_file); // 使い終わったメッシュファイルを閉じる
 	Mesh mesh = {nbv, nbe, nbt, vertices, edges, triangles};
 	return mesh;
+}
+
+void write_mesh(Mesh mesh, FILE * file) {
+	fprintf(file, "NbVertices %zu\n", mesh.nbv);
+	fprintf(file, "NbEdges %zu\n", mesh.nbe);
+	fprintf(file, "NbTriangles %zu\n", mesh.nbt);
+	fprintf(file, "\n");
+	size_t id;
+	for (id = 0; id < mesh.nbv; id++) {
+		Vertex v = mesh.vertices[id];
+		fprintf(file, "Vertex %zu %1.17le %1.17le %d\n", id, v.pos.x, v.pos.y, v.is_internal);
+	}
+	fprintf(file, "\n");
+	for (id = 0; id < mesh.nbe; id++) {
+		Edge e = mesh.edges[id];
+		fprintf(file, "Edge %zu %zu %zu\n", id, e.p->id, e.q->id);
+	}
+	fprintf(file, "\n");
+	for (id = 0; id < mesh.nbt; id++) {
+		Triangle tau = mesh.triangles[id];
+		size_t e0_id = ((size_t)tau.edges[0] - (size_t)mesh.edges) / sizeof(Edge);
+		size_t e1_id = ((size_t)tau.edges[1] - (size_t)mesh.edges) / sizeof(Edge);
+		size_t e2_id = ((size_t)tau.edges[2] - (size_t)mesh.edges) / sizeof(Edge);
+		fprintf(file, "Triangle %zu %zu %zu %zu\n", id, e0_id, e1_id, e2_id);
+	}
 }
 
 void free_mesh(Mesh mesh) {

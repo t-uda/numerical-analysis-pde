@@ -7,6 +7,8 @@ typedef struct vector2d {
 	double y;
 } Vector2D;
 
+Vector2D vec2D_mul(double, Vector2D);
+Vector2D vec2D_add(Vector2D, Vector2D);
 Vector2D vec2D_sub(Vector2D, Vector2D);
 double vec2D_prod(Vector2D, Vector2D);
 double length(Vector2D);

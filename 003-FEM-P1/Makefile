@@ -14,7 +14,7 @@ all: fem.out rectmesh.out genmesh.out
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 fem.out: fem.o mesh.o vector.o
-
+rectmesh.out: rectmesh.o
 genmesh.out: genmesh.o mesh.o vector.o
 
 clean:

@@ -39,7 +39,10 @@ double prod_L2_tau(Triangle, Vertex *, Vertex *);
 
 double semi_prod_H1_tau(Triangle, Vertex *, Vertex *);
 
+Edge * find_edge(size_t, Edge *, Vertex *, Vertex *);
+
 Mesh read_mesh(char []);
+void write_mesh(Mesh, FILE *);
 void free_mesh(Mesh);
 
 #endif

@@ -5,6 +5,17 @@
 
 #include "vector.h"
 
+Vector2D vec2D_mul(double r, Vector2D v) {
+	Vector2D w = {r * v.x, r * v.y};
+	return w;
+}
+
+// returns the addition a+b
+Vector2D vec2D_add(Vector2D a, Vector2D b) {
+	Vector2D c = {a.x + b.x, a.y + b.y};
+	return c;
+}
+
 // returns the subtraction a-b
 Vector2D vec2D_sub(Vector2D a, Vector2D b) {
 	Vector2D c = {a.x - b.x, a.y - b.y};

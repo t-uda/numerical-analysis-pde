@@ -11,7 +11,8 @@
 
 double f(double x, double y) {
 //	return 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
-	return 32.0 * (x * (1.0 - x) + y * (1.0 - y));
+//	return 32.0 * (x * (1.0 - x) + y * (1.0 - y));
+	return 1.0;
 }
 
 int main(int argc, char * argv[]) {
@@ -93,14 +94,26 @@ int main(int argc, char * argv[]) {
 	solve_CG(nbu, x, a, b);
 
 	// 計算結果を出力する
-	for (size_t m = 0; m < mesh.nbv; m++) {
-		Vertex p = mesh.vertices[m];
-		double u = 0.0;
-		if (p.is_internal) {
-			size_t i = internal_ids[m];
-			u = x[i];
+//	for (size_t m = 0; m < mesh.nbv; m++) {
+//		Vertex p = mesh.vertices[m];
+//		double u = 0.0;
+//		if (p.is_internal) {
+//			size_t i = internal_ids[m];
+//			u = x[i];
+//		}
+//		printf("%1.17le\t%1.17le\t%1.17le\n", p.pos.x, p.pos.y, u);
+//	}
+	for (size_t k = 0; k < mesh.nbt; k++) {
+		Triangle tau = mesh.triangles[k];
+		for (size_t v = 0; v < 4; v++) {
+			double u = 0.0;
+			Vertex p = *tau.vertices[v % 3];
+			if (p.is_internal) {
+				u = x[internal_ids[p.id]];
+			}
+			printf("%1.17le\t%1.17le\t%1.17le\n", p.pos.x, p.pos.y, u);
 		}
-		printf("%1.17le\t%1.17le\t%1.17le\n", p.pos.x, p.pos.y, u);
+		printf("\n\n");
 	}
 
 	free(x);
