@@ -7,6 +7,11 @@
 #include <stdbool.h>
 #include <math.h>
 
+double f(double x, double y) {
+//	return 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
+	return 32.0 * (x * (1.0 - x) + y * (1.0 - y));
+}
+
 typedef struct vector2d Vector2D;
 typedef struct vertex Vertex;
 typedef struct edge Edge;
@@ -33,12 +38,12 @@ typedef struct triangle {
 	Vertex * vertices[3];
 } Triangle;
 
-Vector2D vec_sub(Vector2D a, Vector2D b) {
+Vector2D vec2D_sub(Vector2D a, Vector2D b) {
 	Vector2D c = {a.x - b.x, a.y - b.y};
 	return c;
 }
 
-double vec_prod(Vector2D a, Vector2D b) {
+double vec2D_prod(Vector2D a, Vector2D b) {
 	return a.x * b.x + a.y * b.y;
 }
 
@@ -74,9 +79,9 @@ double area_parallelogram(Triangle tau) {
 }
 
 // 三角形要素 tau 上での基底関数同士の L2 内積を返す
-double prod_L2_tau(Triangle tau, size_t i, size_t j) {
+double prod_L2_tau(Triangle tau, Vertex * pi_ptr, Vertex * pj_ptr) {
 	double d = area_parallelogram(tau);
-	return (i == j) ? (d / 12.0) : (d / 24.0);
+	return (pi_ptr == pj_ptr) ? (d / 12.0) : (d / 24.0);
 }
 
 // i 番目の頂点の対辺の内向き法線を返す
@@ -94,7 +99,7 @@ Vector2D inward_normal_vector(Triangle tau, Vertex * pi_ptr) {
 		r = tau.vertices[1]->pos;
 	}
 	double d = determinant(p, q, r);
-	Vector2D qr = vec_sub(q, r);
+	Vector2D qr = vec2D_sub(q, r);
 	Vector2D n = {-qr.y, qr.x};
 	if (d < 0.0) { n.x = -n.x; n.y = -n.y; }
 	return n;
@@ -105,8 +110,10 @@ double semi_prod_H1_tau(Triangle tau, Vertex * pi_ptr, Vertex * pj_ptr) {
 	double area = area_parallelogram(tau);
 	Vector2D grad_i = inward_normal_vector(tau, pi_ptr); // area で割ると i 番目の基底関数の勾配
 	Vector2D grad_j = inward_normal_vector(tau, pj_ptr); // j についても同様
-	return 0.5 * vec_prod(grad_i, grad_j) / area; // 掛けて面積分 i.e. L2 内積
+	return 0.5 * vec2D_prod(grad_i, grad_j) / area; // 掛けて面積分 i.e. L2 内積
 }
+
+void solve_CG(size_t, double *, double **, double *);
 
 int main(int argc, char * argv[]) {
 	if (argc < 2) {
@@ -207,11 +214,38 @@ int main(int argc, char * argv[]) {
 			}
 		}
 	}
+//	for (size_t i = 0; i < nbu; i++) {
+//		for (size_t j = i; j < nbu; j++) {
+//			fprintf(stderr, "a[%zu][%zu] = %le\n", i, j, a[i][j]);
+//		}
+//	}
+	double * b = allocate_real_vector(nbu);
 	for (size_t i = 0; i < nbu; i++) {
-		for (size_t j = i; j < nbu; j++) {
-			fprintf(stderr, "a[%zu][%zu] = %le\n", i, j, a[i][j]);
+		Vertex * p = internal_vertices[i];
+		for (size_t k = 0; k < nbt; k++) {
+			Triangle tau = triangles[k];
+			if (p == tau.vertices[0] || p == tau.vertices[1] || p == tau.vertices[2]) {
+				for (size_t v = 0; v < 3; v++) {
+					Vertex * q = tau.vertices[v];
+					b[i] += f(q->pos.x, q->pos.y) * prod_L2_tau(tau, p, q);
+				}
+			}
 		}
+	//	fprintf(stderr, "b[%zu] = %le\n", i, b[i]);
 	}
+	double * x = allocate_real_vector(nbu);
+	solve_CG(nbu, x, a, b);
+	for (size_t m = 0; m < nbv; m++) {
+		Vertex p = vertices[m];
+		double u = 0.0;
+		if (p.is_internal) {
+			size_t i = internal_ids[m];
+			u = x[i];
+		}
+		printf("%1.17le\t%1.17le\t%1.17le\n", p.pos.x, p.pos.y, u);
+	}
+	free(x);
+	free(b);
 	free(a);
 	free(a_data);
 	free(internal_ids);
@@ -219,5 +253,99 @@ int main(int argc, char * argv[]) {
 	free(edges);
 	free(vertices);
 	return 0;
+}
+
+// x := y
+void vec_set(size_t n, double * x, double * y) {
+	for (size_t i = 0; i < n; i++) {
+		x[i] = y[i];
+	}
+}
+
+// x += y
+void vec_add(size_t n, double * x, double * y) {
+	for (size_t i = 0; i < n; i++) {
+		x[i] += y[i];
+	}
+}
+
+// x -= y
+void vec_sub(size_t n, double * x, double * y) {
+	for (size_t i = 0; i < n; i++) {
+		x[i] -= y[i];
+	}
+}
+
+// x *= r componentwise
+void vec_mul(size_t n, double r, double * x) {
+	for (size_t i = 0; i < n; i++) {
+		x[i] *= r;
+	}
+}
+
+// res = A * x
+void mat_vec_prod(size_t n, double * res, double ** a, double * x) {
+	for (size_t i = 0; i < n; i++) {
+		res[i] = 0.0;
+		for (size_t j = 0; j < n; j++) {
+			res[i] += a[i][j] * x[j];
+		}
+	}
+}
+
+// returns the inner product x.y
+double vec_prod(size_t n, double * x, double * y) {
+	double res = 0.0;
+	for (size_t i = 0; i < n; i++) {
+		res += x[i] * y[i];
+	}
+	return res;
+}
+
+// returns the bilinear form A[x, y] = x.(A*y)
+double bilinear_form(size_t n, double * x, double ** a, double * y) {
+	double * ay = allocate_real_vector(n);
+	mat_vec_prod(n, ay, a, y);
+	double xay = vec_prod(n, x, ay);
+	free(ay);
+	return xay;
+}
+
+// 線形方程式 A x = b を解く．
+void solve_CG(size_t n, double * x, double ** a, double * b) {
+	double * tmp = allocate_real_vector(n);
+	double * r = allocate_real_vector(n);
+	double * p = allocate_real_vector(n);
+	double * alpha_p = allocate_real_vector(n);
+	// r = b - A x
+	mat_vec_prod(n, tmp, a, x);
+	vec_add(n, r, b);
+	vec_sub(n, r, tmp);
+	// p = r
+	vec_add(n, p, r);
+	for (size_t iter = 0; iter < n; iter++) {
+		// alpha = r.r / A[p, p]
+		double r_sqr = vec_prod(n, r, r);
+		double alpha = r_sqr / bilinear_form(n, p, a, p);
+		// alpha_p = alpha * p
+		vec_set(n, alpha_p, p);
+		vec_mul(n, alpha, alpha_p);
+		// x += alpha_p
+		vec_add(n, x, alpha_p);
+		// r -= A * alpha_p
+		mat_vec_prod(n, tmp, a, alpha_p);
+		vec_sub(n, r, tmp);
+		if (vec_prod(n, r, r) < 1.0e-14) break;
+		double beta = vec_prod(n, r, r) / r_sqr;
+		// p := r + beta * p
+		vec_set(n, tmp, p);
+		vec_set(n, p, r);
+		vec_mul(n, beta, tmp);
+		vec_add(n, p, tmp);
+	}
+	free(alpha_p);
+	free(p);
+	free(r);
+	free(tmp);
 }
 
