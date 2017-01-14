@@ -18,6 +18,7 @@ typedef struct vector2d {
 } Vector2D;
 
 typedef struct vertex {
+	size_t id;
 	Vector2D pos;
 	bool is_internal;
 } Vertex;
@@ -47,55 +48,17 @@ double length(Vector2D v) {
 
 // // // // // // // // // * キ ケ ン * // // // // // // // // // //
 // // // // // malloc 関数の使用には十分注意すること！ // // // // //
-// 事前に配列サイズが分からないときは，メモリ確保命令 malloc を使い
-// 浮動小数点数型の配列を動的確保する．
-// 使い終わったら必ず free() すること．
-double ** allocate_double_ptr_vector(size_t n) {
-	double ** vector = malloc(n * sizeof(double *));
-	if (vector == NULL) {
-		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
+// メモリ確保命令 malloc, calloc を使い浮動小数点数型の配列を動的に
+// 確保する．使い終わったら必ず free() すること．
+void check_allocated_or_abort(void * ptr) {
+	if (ptr == NULL) {
+		fprintf(stderr, "Failed to allocate a vector. ABORT.\n");
 		exit(EXIT_FAILURE);
 	}
-	return vector;
 }
 double * allocate_real_vector(size_t n) {
-	double * vector = malloc(n * sizeof(double));
-	if (vector == NULL) {
-		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
-		exit(EXIT_FAILURE);
-	}
-	return vector;
-}
-Vertex * allocate_vertex_vector(size_t n) {
-	Vertex * vector = malloc(n * sizeof(Vertex));
-	if (vector == NULL) {
-		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
-		exit(EXIT_FAILURE);
-	}
-	return vector;
-}
-Vertex ** allocate_vertex_ptr_vector(size_t n) {
-	Vertex ** vector = malloc(n * sizeof(Vertex *));
-	if (vector == NULL) {
-		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
-		exit(EXIT_FAILURE);
-	}
-	return vector;
-}
-Edge * allocate_edge_vector(size_t n) {
-	Edge * vector = malloc(n * sizeof(Edge));
-	if (vector == NULL) {
-		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
-		exit(EXIT_FAILURE);
-	}
-	return vector;
-}
-Triangle * allocate_triangle_vector(size_t n) {
-	Triangle * vector = malloc(n * sizeof(Triangle));
-	if (vector == NULL) {
-		fprintf(stderr, "Failed to allocate vector. ABORT.\n");
-		exit(EXIT_FAILURE);
-	}
+	double * vector = calloc(n, sizeof(double));
+	check_allocated_or_abort(vector);
 	return vector;
 }
 // // // // // // // // // * キ ケ ン * // // // // // // // // // //
@@ -165,11 +128,14 @@ int main(int argc, char * argv[]) {
 	while (fgets(buffer, sizeof(buffer), mesh_file) != NULL) {
 		if (nbv == 0 || nbe == 0 || nbt == 0) {
 			if (sscanf(buffer, "NbVertices %zu", &nbv) == 1) {
-				vertices = allocate_vertex_vector(nbv);
+				vertices = malloc(nbv * sizeof(Vertex));
+				check_allocated_or_abort(vertices);
 			} else if (sscanf(buffer, "NbEdges %zu", &nbe) == 1) {
-				edges = allocate_edge_vector(nbe);
+				edges = malloc(nbe * sizeof(Edge));
+				check_allocated_or_abort(edges);
 			} else if (sscanf(buffer, "NbTriangles %zu", &nbt) == 1) {
-				triangles = allocate_triangle_vector(nbt);
+				triangles = malloc(nbt * sizeof(Triangle));
+				check_allocated_or_abort(triangles);
 			}
 		} else {
 			size_t id;
@@ -178,6 +144,7 @@ int main(int argc, char * argv[]) {
 			size_t e0, e1, e2; // Triangle (e1, e2, e3)
 			int is_internal;
 			if (sscanf(buffer, "Vertex %zu %lf %lf %d", &id, &x, &y, &is_internal) == 4) {
+				vertices[id].id = id;
 				vertices[id].pos.x = x;
 				vertices[id].pos.y = y;
 				vertices[id].is_internal = is_internal;
@@ -201,49 +168,53 @@ int main(int argc, char * argv[]) {
 	}
 	fclose(mesh_file);
 
-	size_t n = 0;
-	Vertex ** internal_vertices = allocate_vertex_ptr_vector(nbv);
+	size_t nbu = 0;
+	size_t * internal_ids = malloc(nbv * sizeof(size_t));
+	check_allocated_or_abort(internal_ids);
+	Vertex ** internal_vertices = malloc(nbv * sizeof(Vertex *));
+	check_allocated_or_abort(internal_vertices);
 	for (size_t m = 0; m < nbv; m++) {
 		if (vertices[m].is_internal) {
-			internal_vertices[n] = &vertices[m];
-			n++;
+			size_t id = nbu++;
+			internal_ids[m] = id;
+			internal_vertices[id] = &vertices[m];
 		}
 	}
-	double * a_data = allocate_real_vector(n * n);
-	double ** a = allocate_double_ptr_vector(n);
-	for (size_t i = 0; i < n; i++) {
-		a[i] = &a_data[i * n];
+	double * a_data = allocate_real_vector(nbu * nbu);
+	double ** a = malloc(nbu * sizeof(double **));
+	check_allocated_or_abort(a);
+	for (size_t i = 0; i < nbu; i++) {
+		a[i] = &a_data[i * nbu];
 	}
-	for (size_t i = 0; i < n; i++) {
-		Vertex * pi_ptr = internal_vertices[i];
-		for (size_t j = i; j < n; j++) {
-			Vertex * pj_ptr = internal_vertices[j];
-			a[i][j] = a[j][i] = 0.0;
-			if (i != j) {
-				bool is_adjascent = false;
-				for (size_t e_id = 0; e_id < nbe; ++e_id) {
-					Edge e = edges[e_id];
-					if ((e.p == pi_ptr && e.q == pj_ptr) || (e.p == pj_ptr && e.q == pi_ptr)) {
-						is_adjascent = true;
-						break;
-					}
-				}
-				if (!is_adjascent) continue;
+	for (size_t e_id = 0; e_id < nbe; e_id++) {
+		Edge * e = &edges[e_id];
+		if (!e->p->is_internal || !e->q->is_internal) continue;
+		size_t i = internal_ids[e->p->id], j = internal_ids[e->q->id];
+		for (size_t k = 0; k < nbt; k++) {
+			Triangle tau = triangles[k];
+			if (e == tau.edges[0] || e == tau.edges[1] || e == tau.edges[2]) {
+				a[i][j] += semi_prod_H1_tau(tau, e->p, e->q);
 			}
-			for (size_t k = 0; k < nbt; k++) {
-				Triangle tau = triangles[k];
-				Vertex * p = tau.vertices[0], * q = tau.vertices[1], * r = tau.vertices[2];
-				if (pi_ptr == p || pi_ptr == q || pi_ptr == r)
-				if (pj_ptr == p || pj_ptr == q || pj_ptr == r)
-					a[i][j] += semi_prod_H1_tau(tau, pi_ptr, pj_ptr);
+		}
+		a[j][i] = a[i][j];
+	}
+	for (size_t i = 0; i < nbu; i++) {
+		Vertex * p = internal_vertices[i];
+		for (size_t k = 0; k < nbt; k++) {
+			Triangle tau = triangles[k];
+			if (p == tau.vertices[0] || p == tau.vertices[1] || p == tau.vertices[2]) {
+				a[i][i] += semi_prod_H1_tau(tau, p, p);
 			}
-			a[j][i] = a[i][j];
+		}
+	}
+	for (size_t i = 0; i < nbu; i++) {
+		for (size_t j = i; j < nbu; j++) {
 			fprintf(stderr, "a[%zu][%zu] = %le\n", i, j, a[i][j]);
 		}
 	}
 	free(a);
 	free(a_data);
-	free(internal_vertices);
+	free(internal_ids);
 	free(triangles);
 	free(edges);
 	free(vertices);
