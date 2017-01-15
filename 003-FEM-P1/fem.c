@@ -12,7 +12,12 @@
 double f(double x, double y) {
 //	return 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
 //	return 32.0 * (x * (1.0 - x) + y * (1.0 - y));
-	return 1.0;
+//	return 1.0;
+	return 0.0;
+}
+
+double Dirichlet_data(double x, double y) {
+	return x * x - y * y;
 }
 
 int main(int argc, char * argv[]) {
@@ -84,6 +89,10 @@ int main(int argc, char * argv[]) {
 				for (size_t v = 0; v < 3; v++) {
 					Vertex * q = tau.vertices[v];
 					b[i] += f(q->pos.x, q->pos.y) * prod_L2_tau(tau, p, q);
+					// 境界上の頂点については Dirichlet 境界条件由来の項も足す
+					if (!q->is_internal) {
+						b[i] += -Dirichlet_data(q->pos.x, q->pos.y) * semi_prod_H1_tau(tau, p, q);
+					}
 				}
 			}
 		}
@@ -106,11 +115,8 @@ int main(int argc, char * argv[]) {
 	for (size_t k = 0; k < mesh.nbt; k++) {
 		Triangle tau = mesh.triangles[k];
 		for (size_t v = 0; v < 4; v++) {
-			double u = 0.0;
 			Vertex p = *tau.vertices[v % 3];
-			if (p.is_internal) {
-				u = x[internal_ids[p.id]];
-			}
+			double u = (p.is_internal) ?  x[internal_ids[p.id]] : Dirichlet_data(p.pos.x, p.pos.y);
 			printf("%1.17le\t%1.17le\t%1.17le\n", p.pos.x, p.pos.y, u);
 		}
 		printf("\n\n");
