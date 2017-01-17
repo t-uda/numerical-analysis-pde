@@ -42,7 +42,7 @@ int main(int argc, char * argv[]) {
 
 	// サイズ nbu*nbu の double 型配列を確保し，それを行列として使う
 	double * a_data = allocate_real_vector(nbu * nbu);
-	double ** a = malloc(nbu * sizeof(double **));
+	double ** a = malloc(nbu * sizeof(double *));
 	check_allocated_or_abort(a);
 	for (size_t i = 0; i < nbu; i++) {
 		a[i] = &a_data[i * nbu];
