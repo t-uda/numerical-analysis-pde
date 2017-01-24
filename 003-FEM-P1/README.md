@@ -3,10 +3,23 @@
 P1 有限要素法によるポアソン方程式の境界値問題の数値計算プログラム `fem.c` は，主に三つの部分からなる：
 
  * メッシュファイルからのデータ読み込み
-   * メッシュファイルの生成は `rectmesh.c` または `genmesh.c` が担当
+   * メッシュファイルの読み書きは `mesh.c` が担当
+   * メッシュデータの生成は `rectmesh.c` または `genmesh.c` が担当
  * 剛性行列（と右辺ベクトル）の計算
+   * メッシュデータからの内積計算の基礎部分は `mesh.c` が担当
  * 連立方程式の計算（CG 法）
    * CG 法の実装は `vector.c` が担当
+
+プログラムのコンパイルから実行，可視化までは以下のように行う：
+
+```shell
+$ make
+$ ./rectmesh.out > mesh.dat
+ ( もしくは ./genmesh.out > mesh.dat )
+$ ./fem.out mesh.dat > output.dat
+$ gnuplot -e "splot 'output.dat'"
+ ( もしくは gnuplot -e "splot 'output.dat' with lines" )
+```
 
 ここでは，メッシュと剛性行列について簡単に解説する．
 
