@@ -51,6 +51,7 @@ double semi_prod_H1_tau(Triangle tau, Vertex * pi_ptr, Vertex * pj_ptr) {
 	return 0.5 * vec2D_prod(grad_i, grad_j) / area; // 掛けて面積分 i.e. L2 内積
 }
 
+// 長さ nbe の Edge の配列 edges[] から，頂点 p, q が結ぶ辺へのポインタ e を探して返す
 Edge * find_edge(size_t nbe, Edge * edges, Vertex * p, Vertex * q) {
 	for (size_t id = 0; id < nbe; id++) {
 		Edge * e = &edges[id];
@@ -61,6 +62,7 @@ Edge * find_edge(size_t nbe, Edge * edges, Vertex * p, Vertex * q) {
 	return NULL;
 }
 
+// メッシュファイルから情報を読み込み，メッシュデータを確保して返す
 Mesh read_mesh(char mesh_file_name[]) {
 	FILE * mesh_file = fopen(mesh_file_name, "r");
 	if (mesh_file == NULL) {
@@ -122,22 +124,27 @@ Mesh read_mesh(char mesh_file_name[]) {
 	return mesh;
 }
 
+// mesh の情報を file へ書き込む
 void write_mesh(Mesh mesh, FILE * file) {
+	// 各種個数
 	fprintf(file, "NbVertices %zu\n", mesh.nbv);
 	fprintf(file, "NbEdges %zu\n", mesh.nbe);
 	fprintf(file, "NbTriangles %zu\n", mesh.nbt);
 	fprintf(file, "\n");
 	size_t id;
+	// 頂点
 	for (id = 0; id < mesh.nbv; id++) {
 		Vertex v = mesh.vertices[id];
 		fprintf(file, "Vertex %zu %1.17le %1.17le %d\n", id, v.pos.x, v.pos.y, v.is_internal);
 	}
 	fprintf(file, "\n");
+	// 辺
 	for (id = 0; id < mesh.nbe; id++) {
 		Edge e = mesh.edges[id];
 		fprintf(file, "Edge %zu %zu %zu\n", id, e.p->id, e.q->id);
 	}
 	fprintf(file, "\n");
+	// 三角形
 	for (id = 0; id < mesh.nbt; id++) {
 		Triangle tau = mesh.triangles[id];
 		size_t e0_id = ((size_t)tau.edges[0] - (size_t)mesh.edges) / sizeof(Edge);
@@ -147,6 +154,7 @@ void write_mesh(Mesh mesh, FILE * file) {
 	}
 }
 
+// mesh が参照するメモリーを解放する
 void free_mesh(Mesh mesh) {
 	free(mesh.triangles);
 	free(mesh.edges);

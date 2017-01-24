@@ -5,6 +5,7 @@
 
 #include "vector.h"
 
+// returns the scalar multiplication r*v
 Vector2D vec2D_mul(double r, Vector2D v) {
 	Vector2D w = {r * v.x, r * v.y};
 	return w;

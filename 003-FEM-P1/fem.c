@@ -1,6 +1,21 @@
 // * 京都大学 2016 年度後期「数値解析」
 // 担当教員：Karel Svadlenka
 // プログラム作成者：宇田 智紀
+//
+// P1 有限要素法でポアソン方程式の境界値問題を解く．
+// 領域は，予めメッシュ情報を書き込んだファイル mesh.dat を
+// 別の方法で用意しておきプログラムの第一引数として与える．
+// プログラムは make を使うか，gcc を使ってコンパイルせよ．
+// このプログラムは標準出力に計算結果を出力する．
+// 可視化するためには，一度ファイルに出力するなどして，
+// 例えば gnuplot で splot 'output.dat' を試せ．
+//
+//     $ make
+//     $ ./rectmesh.out > mesh.dat
+//       ( もしくは ./genmesh.out > mesh.dat )
+//     $ ./fem.out mesh.dat > output.dat
+//     $ gnuplot -e "splot 'output.dat'"
+//
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +24,7 @@
 #include "vector.h"
 #include "mesh.h"
 
+// ポアソン方程式の右辺（ソースターム）
 double f(double x, double y) {
 //	return 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
 //	return 32.0 * (x * (1.0 - x) + y * (1.0 - y));
@@ -16,6 +32,7 @@ double f(double x, double y) {
 	return 0.0;
 }
 
+// 境界条件
 double Dirichlet_data(double x, double y) {
 	return x * x - y * y;
 }
